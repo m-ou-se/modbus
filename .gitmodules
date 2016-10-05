@@ -1,3 +1,6 @@
 [submodule "serial"]
 	path = serial
 	url = https://github.com/m-ou-se/serial
+[submodule "mstd"]
+	path = mstd
+	url = https://github.com/m-ou-se/mstd
