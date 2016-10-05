@@ -12,6 +12,7 @@ enum class Error : int {
 	slave_device_failure     = 0x04,
 	acknowledge              = 0x05,
 	slave_device_busy        = 0x06,
+	negative_acknowledge     = 0x07,
 	memory_parity_error      = 0x08,
 	gateway_path_unavailable = 0x0A,
 	gateway_no_response      = 0x0B,
@@ -33,6 +34,7 @@ public:
 			case Error::slave_device_failure:     return "slave device failure";
 			case Error::acknowledge:              return "acknowledge";
 			case Error::slave_device_busy:        return "slave device busy";
+			case Error::negative_acknowledge:     return "negative acknowledge";
 			case Error::memory_parity_error:      return "memory parity error";
 			case Error::gateway_path_unavailable: return "gateway path unavailable";
 			case Error::gateway_no_response:      return "gateway no response";
