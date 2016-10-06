@@ -2,12 +2,11 @@
 #include <chrono>
 #include <cstdint>
 
-#include "mstd/error_or.hpp"
-#include "mstd/range.hpp"
+#include <mstd/error_or.hpp>
+#include <mstd/range.hpp>
 
-#include "modbus.hpp"
-
-#include "modbus_error.hpp"
+#include <modbus/error.hpp>
+#include <modbus/modbus.hpp>
 
 namespace Modbus {
 
