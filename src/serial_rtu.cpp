@@ -47,19 +47,19 @@ error_or<range<byte_t>> ModbusSerialRtu::raw_command(
 	auto read = port_.read(timeout);
 	size_t read_i = 0;
 
-	for (; read.ok(); read = port_.read(2ms), ++read_i) {
-		crc.add(read.value());
+	for (; read.ok() && read.value(); read = port_.read(2ms), ++read_i) {
+		crc.add(*read.value());
 		if (read_i == 0) {
 			if (read.value() != slave_id) is_invalid_response = true;
 		} else if (read_i == 1) {
-			if (read.value() == (function_code | 0x80)) {
+			if (*read.value() == (function_code | 0x80)) {
 				is_exception_response = true;
 				response_buffer = exception_code;
 			} else if (read.value() != function_code) {
 				is_invalid_response = true;
 			}
 		} else if (read_i >= 2 && read_i < 2 + response_buffer.size()) {
-			response_buffer[read_i - 2] = read.value();
+			response_buffer[read_i - 2] = *read.value();
 		} else if (read_i > 255) {
 			// Modbus serial RTU frames may be no longer than 256 bytes.
 			// (1 byte slave id, 2 bytes crc, and 253 PDU.)
@@ -70,10 +70,7 @@ error_or<range<byte_t>> ModbusSerialRtu::raw_command(
 		}
 	}
 
-	if (read.error() != std::make_error_code(std::errc::stream_timeout)) {
-		// An error occured while reading.
-		return read.error();
-	}
+	if (read.error()) return read.error();
 
 	if (read_i == 0) {
 		// No bytes were read before the first timeout.
