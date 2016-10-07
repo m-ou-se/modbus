@@ -13,7 +13,7 @@ class crc_ibm {
 
 public:
 	crc_ibm() {}
-	crc_ibm(mstd::range<unsigned char const> r) { add(r); }
+	explicit crc_ibm(mstd::range<unsigned char const> r) { add(r); }
 
 	crc_ibm & add(mstd::range<unsigned char const> r) {
 		for (unsigned char b : r) {
