@@ -32,3 +32,5 @@ target_link_libraries(modbus-serial-rtu PUBLIC
 	modbus
 	serial
 )
+
+add_subdirectory(tool)
