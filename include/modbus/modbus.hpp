@@ -20,12 +20,14 @@ class Modbus {
 
 public:
 
+	using timeout_t = std::chrono::milliseconds;
+
 	// Function code 0x01.
 	error_or<void> read_coils(
 		byte_t slave_id,
 		uint16_t address,
 		range<bool> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x02.
@@ -33,7 +35,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<bool> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x03.
@@ -41,7 +43,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<uint16_t> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x04.
@@ -49,7 +51,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<uint16_t> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x05.
@@ -57,7 +59,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		bool value,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x06.
@@ -65,7 +67,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		uint16_t value,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x0F.
@@ -73,7 +75,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<bool const> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x05 or 0x0F.
@@ -81,7 +83,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<bool const> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	) {
 		if (values.size() == 1) return write_single_coil(slave_id, address, values[0], timeout);
 		else return write_multiple_coils(slave_id, address, values, timeout);
@@ -92,7 +94,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<uint16_t const> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x06 or 0x10.
@@ -100,7 +102,7 @@ public:
 		byte_t slave_id,
 		uint16_t address,
 		range<uint16_t const> values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	) {
 		if (values.size() == 1) return write_single_register(slave_id, address, values[0], timeout);
 		else return write_multiple_registers(slave_id, address, values, timeout);
@@ -116,7 +118,7 @@ public:
 	error_or<void> read_file_record(
 		byte_t slave_id,
 		range<read_file_group> groups,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	struct write_file_group {
@@ -129,7 +131,7 @@ public:
 	error_or<void> write_file_record(
 		byte_t slave_id,
 		range<write_file_group> groups,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x16.
@@ -138,7 +140,7 @@ public:
 		uint16_t address,
 		uint16_t and_mask,
 		uint16_t or_mask,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Function code 0x17.
@@ -148,7 +150,7 @@ public:
 		range<uint16_t const> write_values,
 		uint16_t read_address,
 		range<uint16_t> read_values,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	);
 
 	// Send a raw command.
@@ -163,7 +165,7 @@ public:
 		byte_t function_code,
 		range<byte_t const> parameters,
 		range<byte_t> response_buffer,
-		std::chrono::milliseconds timeout
+		timeout_t timeout
 	) = 0;
 
 };

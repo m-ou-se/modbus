@@ -14,7 +14,7 @@ error_or<void> Modbus::read_coils(
 	byte_t slave_id,
 	uint16_t address,
 	range<bool> values,
-	std::chrono::milliseconds timeout
+	Modbus::timeout_t timeout
 ) {
 	if (values.size() > 2000) return std::error_code(Error::request_too_large);
 	std::array<byte_t, 251> buffer;
@@ -41,7 +41,7 @@ error_or<void> Modbus::read_inputs(
 	byte_t slave_id,
 	uint16_t address,
 	range<bool> values,
-	std::chrono::milliseconds timeout
+	Modbus::timeout_t timeout
 ) {
 	if (values.size() > 2000) return std::error_code(Error::request_too_large);
 	std::array<byte_t, 251> buffer;
@@ -68,7 +68,7 @@ error_or<void> Modbus::read_holding_registers(
 	byte_t slave_id,
 	uint16_t address,
 	range<uint16_t> values,
-	std::chrono::milliseconds timeout
+	Modbus::timeout_t timeout
 ) {
 	if (values.size() > 125) return std::error_code(Error::request_too_large);
 	std::array<byte_t, 251> buffer;
@@ -95,7 +95,7 @@ error_or<void> Modbus::read_input_registers(
 	byte_t slave_id,
 	uint16_t address,
 	range<uint16_t> values,
-	std::chrono::milliseconds timeout
+	Modbus::timeout_t timeout
 ) {
 	if (values.size() > 125) return std::error_code(Error::request_too_large);
 	std::array<byte_t, 251> buffer;
@@ -122,7 +122,7 @@ error_or<void> Modbus::write_single_coil(
 	byte_t slave_id,
 	uint16_t address,
 	bool value,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	std::array<byte_t, 4> request = {{
 		byte_t(address >> 8),
@@ -145,7 +145,7 @@ error_or<void> Modbus::write_single_register(
 	byte_t slave_id,
 	uint16_t address,
 	uint16_t value,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	std::array<byte_t, 4> request = {{
 		byte_t(address >> 8),
@@ -166,7 +166,7 @@ error_or<void> Modbus::write_multiple_coils(
 	byte_t slave_id,
 	uint16_t address,
 	range<bool const> values,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	if (values.size() > 1968) return std::error_code(Error::request_too_large);
 	byte_t n_data_bytes = (values.size() + 7) / 8;
@@ -195,7 +195,7 @@ error_or<void> Modbus::write_multiple_registers(
 	byte_t slave_id,
 	uint16_t address,
 	range<uint16_t const> values,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	if (values.size() > 123) return std::error_code(Error::request_too_large);
 	std::array<byte_t, 251> request_buffer;
@@ -223,7 +223,7 @@ error_or<void> Modbus::write_multiple_registers(
 error_or<void> Modbus::read_file_record(
 	byte_t slave_id,
 	range<read_file_group> groups,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	if (groups.size() > 35) return std::error_code(Error::request_too_large);
 	size_t n_expected_bytes = 1;
@@ -266,7 +266,7 @@ error_or<void> Modbus::read_file_record(
 error_or<void> Modbus::write_file_record(
 	byte_t slave_id,
 	range<write_file_group> groups,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	size_t n_bytes = 1;
 	for (auto const & g : groups) {
@@ -304,7 +304,7 @@ error_or<void> Modbus::mask_write_register(
 	uint16_t address,
 	uint16_t and_mask,
 	uint16_t or_mask,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	std::array<byte_t, 6> request = {{
 		byte_t(address >> 8),
@@ -329,7 +329,7 @@ error_or<void> Modbus::read_write_registers(
 	range<uint16_t const> write_values,
 	uint16_t read_address,
 	range<uint16_t> read_values,
-	std::chrono::milliseconds timeout
+	timeout_t timeout
 ) {
 	if (read_values.size() > 125 || write_values.size() > 121) {
 		return std::error_code(Error::request_too_large);
