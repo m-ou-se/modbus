@@ -15,11 +15,13 @@ add_library(modbus
 	src/modbus.cpp
 )
 
+target_include_directories(modbus PUBLIC
+	include
+)
+
 target_link_libraries(modbus PUBLIC
 	mstd
 )
-
-target_include_directories(modbus PUBLIC include)
 
 add_library(modbus-serial-rtu
 	src/crc.cpp
