@@ -30,6 +30,10 @@ public:
 		timeout_t timeout
 	);
 
+	// Same, with different types instead of bool.
+	error_or<void> read_coils(byte_t, uint16_t, range<unsigned char>, timeout_t);
+	error_or<void> read_coils(byte_t, uint16_t, range<uint16_t>, timeout_t);
+
 	// Function code 0x02.
 	error_or<void> read_inputs(
 		byte_t slave_id,
@@ -37,6 +41,10 @@ public:
 		range<bool> values,
 		timeout_t timeout
 	);
+
+	// Same, with different types instead of bool.
+	error_or<void> read_inputs(byte_t, uint16_t, range<unsigned char>, timeout_t);
+	error_or<void> read_inputs(byte_t, uint16_t, range<uint16_t>, timeout_t);
 
 	// Function code 0x03.
 	error_or<void> read_holding_registers(
@@ -78,11 +86,33 @@ public:
 		timeout_t timeout
 	);
 
+	// Same, with different types instead of bool.
+	error_or<void> write_multiple_coils(byte_t, uint16_t, range<unsigned char const>, timeout_t);
+	error_or<void> write_multiple_coils(byte_t, uint16_t, range<uint16_t const>, timeout_t);
+
 	// Function code 0x05 or 0x0F.
 	error_or<void> write_coils(
 		byte_t slave_id,
 		uint16_t address,
 		range<bool const> values,
+		timeout_t timeout
+	) {
+		if (values.size() == 1) return write_single_coil(slave_id, address, values[0], timeout);
+		else return write_multiple_coils(slave_id, address, values, timeout);
+	}
+	error_or<void> write_coils(
+		byte_t slave_id,
+		uint16_t address,
+		range<unsigned char const> values,
+		timeout_t timeout
+	) {
+		if (values.size() == 1) return write_single_coil(slave_id, address, values[0], timeout);
+		else return write_multiple_coils(slave_id, address, values, timeout);
+	}
+	error_or<void> write_coils(
+		byte_t slave_id,
+		uint16_t address,
+		range<uint16_t const> values,
 		timeout_t timeout
 	) {
 		if (values.size() == 1) return write_single_coil(slave_id, address, values[0], timeout);

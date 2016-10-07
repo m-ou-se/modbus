@@ -10,10 +10,15 @@
 
 namespace Modbus {
 
-error_or<void> Modbus::read_coils(
+namespace {
+
+template<typename T>
+error_or<void> read_bits(
+	Modbus & bus,
+	unsigned char function_code,
 	byte_t slave_id,
 	uint16_t address,
-	range<bool> values,
+	range<T> values,
 	Modbus::timeout_t timeout
 ) {
 	if (values.size() > 2000) return std::error_code(Error::request_too_large);
@@ -24,7 +29,7 @@ error_or<void> Modbus::read_coils(
 	*p++ = values.size() >> 8;
 	*p++ = values.size() & 0xFF;
 	size_t n_expected_bytes = (values.size() + 7) / 8 + 1;
-	if (auto r = raw_command(slave_id, 0x01, {buffer.data(), p}, {buffer.data(), n_expected_bytes}, timeout)) {
+	if (auto r = bus.raw_command(slave_id, function_code, {buffer.data(), p}, {buffer.data(), n_expected_bytes}, timeout)) {
 		if (r->size() != n_expected_bytes || buffer[0] != n_expected_bytes - 1) {
 			return std::error_code(Error::invalid_response);
 		}
@@ -37,34 +42,9 @@ error_or<void> Modbus::read_coils(
 	}
 }
 
-error_or<void> Modbus::read_inputs(
-	byte_t slave_id,
-	uint16_t address,
-	range<bool> values,
-	Modbus::timeout_t timeout
-) {
-	if (values.size() > 2000) return std::error_code(Error::request_too_large);
-	std::array<byte_t, 251> buffer;
-	byte_t * p = buffer.data();
-	*p++ = address >> 8;
-	*p++ = address & 0xFF;
-	*p++ = values.size() >> 8;
-	*p++ = values.size() & 0xFF;
-	size_t n_expected_bytes = (values.size() + 7) / 8 + 1;
-	if (auto r = raw_command(slave_id, 0x02, {buffer.data(), p}, {buffer.data(), n_expected_bytes}, timeout)) {
-		if (r->size() != n_expected_bytes || buffer[0] != n_expected_bytes - 1) {
-			return std::error_code(Error::invalid_response);
-		}
-		for (size_t i = 0; i < values.size(); ++i) {
-			values[i] = buffer[1 + i / 8] >> i % 8 & 1;
-		}
-		return {};
-	} else {
-		return r.error();
-	}
-}
-
-error_or<void> Modbus::read_holding_registers(
+error_or<void> read_regs(
+	Modbus & bus,
+	unsigned char function_code,
 	byte_t slave_id,
 	uint16_t address,
 	range<uint16_t> values,
@@ -78,7 +58,7 @@ error_or<void> Modbus::read_holding_registers(
 	*p++ = values.size() >> 8;
 	*p++ = values.size() & 0xFF;
 	size_t n_expected_bytes = values.size() * 2 + 1;
-	if (auto r = raw_command(slave_id, 0x03, {buffer.data(), p}, {buffer.data(), n_expected_bytes}, timeout)) {
+	if (auto r = bus.raw_command(slave_id, function_code, {buffer.data(), p}, {buffer.data(), n_expected_bytes}, timeout)) {
 		if (r->size() != n_expected_bytes || buffer[0] != n_expected_bytes - 1) {
 			return std::error_code(Error::invalid_response);
 		}
@@ -91,31 +71,70 @@ error_or<void> Modbus::read_holding_registers(
 	}
 }
 
-error_or<void> Modbus::read_input_registers(
+template<typename T>
+error_or<void> write_bits(
+	Modbus & bus,
 	byte_t slave_id,
 	uint16_t address,
-	range<uint16_t> values,
+	range<T const> values,
 	Modbus::timeout_t timeout
 ) {
-	if (values.size() > 125) return std::error_code(Error::request_too_large);
-	std::array<byte_t, 251> buffer;
-	byte_t * p = buffer.data();
+	if (values.size() > 1968) return std::error_code(Error::request_too_large);
+	byte_t n_data_bytes = (values.size() + 7) / 8;
+	std::array<byte_t, 251> request_buffer;
+	byte_t * p = request_buffer.data();
 	*p++ = address >> 8;
 	*p++ = address & 0xFF;
 	*p++ = values.size() >> 8;
 	*p++ = values.size() & 0xFF;
-	size_t n_expected_bytes = values.size() * 2 + 1;
-	if (auto r = raw_command(slave_id, 0x04, {buffer.data(), p}, {buffer.data(), n_expected_bytes}, timeout)) {
-		if (r->size() != n_expected_bytes || buffer[0] != n_expected_bytes - 1) {
+	*p++ = n_data_bytes;
+	for (size_t i = 0; i < values.size(); ++i) {
+		if (values[i]) request_buffer[5 + i / 8] |= 1 << i % 8;
+	}
+	std::array<byte_t, 4> response;
+	if (auto r = bus.raw_command(slave_id, 0x0F, {request_buffer.data(), p + n_data_bytes}, response, timeout)) {
+		if (*r != range<byte_t>(request_buffer.data(), 4)) {
 			return std::error_code(Error::invalid_response);
-		}
-		for (size_t i = 0; i < values.size(); ++i) {
-			values[i] = uint16_t(buffer[1 + i * 2]) << 8 | buffer[2 + i * 2];
 		}
 		return {};
 	} else {
 		return r.error();
 	}
+}
+
+
+}
+
+error_or<void> Modbus::read_coils(byte_t s, uint16_t a, range<bool> v, timeout_t t) {
+	return read_bits(*this, 0x01, s, a, v, t);
+}
+
+error_or<void> Modbus::read_inputs(byte_t s, uint16_t a, range<bool> v, timeout_t t) {
+	return read_bits(*this, 0x02, s, a, v, t);
+}
+
+error_or<void> Modbus::read_coils(byte_t s, uint16_t a, range<unsigned char> v, timeout_t t) {
+	return read_bits(*this, 0x01, s, a, v, t);
+}
+
+error_or<void> Modbus::read_inputs(byte_t s, uint16_t a, range<unsigned char> v, timeout_t t) {
+	return read_bits(*this, 0x02, s, a, v, t);
+}
+
+error_or<void> Modbus::read_coils(byte_t s, uint16_t a, range<uint16_t> v, timeout_t t) {
+	return read_bits(*this, 0x01, s, a, v, t);
+}
+
+error_or<void> Modbus::read_inputs(byte_t s, uint16_t a, range<uint16_t> v, timeout_t t) {
+	return read_bits(*this, 0x02, s, a, v, t);
+}
+
+error_or<void> Modbus::read_holding_registers(byte_t s, uint16_t a, range<uint16_t> v, timeout_t t) {
+	return read_regs(*this, 0x03, s, a, v, t);
+}
+
+error_or<void> Modbus::read_input_registers(byte_t s, uint16_t a, range<uint16_t> v, timeout_t t) {
+	return read_regs(*this, 0x04, s, a, v, t);
 }
 
 error_or<void> Modbus::write_single_coil(
@@ -162,33 +181,16 @@ error_or<void> Modbus::write_single_register(
 	}
 }
 
-error_or<void> Modbus::write_multiple_coils(
-	byte_t slave_id,
-	uint16_t address,
-	range<bool const> values,
-	timeout_t timeout
-) {
-	if (values.size() > 1968) return std::error_code(Error::request_too_large);
-	byte_t n_data_bytes = (values.size() + 7) / 8;
-	std::array<byte_t, 251> request_buffer;
-	byte_t * p = request_buffer.data();
-	*p++ = address >> 8;
-	*p++ = address & 0xFF;
-	*p++ = values.size() >> 8;
-	*p++ = values.size() & 0xFF;
-	*p++ = n_data_bytes;
-	for (size_t i = 0; i < values.size(); ++i) {
-		if (values[i]) request_buffer[5 + i / 8] |= 1 << i % 8;
-	}
-	std::array<byte_t, 4> response;
-	if (auto r = raw_command(slave_id, 0x0F, {request_buffer.data(), p + n_data_bytes}, response, timeout)) {
-		if (*r != range<byte_t>(request_buffer.data(), 4)) {
-			return std::error_code(Error::invalid_response);
-		}
-		return {};
-	} else {
-		return r.error();
-	}
+error_or<void> Modbus::write_multiple_coils(byte_t s, uint16_t a, range<bool const> v, timeout_t t) {
+	return write_bits(*this, s, a, v, t);
+}
+
+error_or<void> Modbus::write_multiple_coils(byte_t s, uint16_t a, range<unsigned char const> v, timeout_t t) {
+	return write_bits(*this, s, a, v, t);
+}
+
+error_or<void> Modbus::write_multiple_coils(byte_t s, uint16_t a, range<uint16_t const> v, timeout_t t) {
+	return write_bits(*this, s, a, v, t);
 }
 
 error_or<void> Modbus::write_multiple_registers(
