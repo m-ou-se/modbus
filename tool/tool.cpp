@@ -12,7 +12,7 @@ using namespace Serial;
 
 void usage(char const * argv0) {
 	std::puts("\nUsage:");
-	std::printf("\t%s <port> <slave-id> <command>\n", argv0);
+	std::printf("\t%s <port> [-s <baud-rate>[(N|E|O)[<stop-bits>]]] <slave-id> <command>\n", argv0);
 	std::puts("\nCommands:");
 	std::puts("\tread-coils <address> <length>");
 	std::puts("\tread-inputs <address> <length>");
@@ -61,7 +61,7 @@ int main(int argc, char * * argv) {
 	}
 
 	auto next_arg = [&] {
-		char const * arg = *argv++;
+		char * arg = *argv++;
 		if (!arg) {
 			fputs("Missing argument.\n", stderr);
 			std::exit(1);
@@ -69,9 +69,9 @@ int main(int argc, char * * argv) {
 		return arg;
 	};
 
-	auto parse_uint16 = [&] (char const * src) -> uint16_t {
+	auto parse_uint = [&] (char const * src) -> unsigned int {
 		char const * s = src;
-		int v = 0;
+		unsigned int v = 0;
 		int base = 10;
 		if (s[0] == '0' && s[1] == 'x') {
 			base = 16;
@@ -80,82 +80,104 @@ int main(int argc, char * * argv) {
 		char const * digits = "0123456789ABCDEF";
 		while (char c = *s++) {
 			char const * d = std::strchr(digits, std::toupper(c));
-			if (d != nullptr) {
-				v *= base;
-				v += d - digits;
-			}
-			if (d == nullptr || d - digits >= base || v > 0xFFFF) {
-				fprintf(stderr, "Expected 16-bit integer, but got \"%s\"\n", src);
+			if (d == nullptr) {
+				fprintf(stderr, "Expected integer, but got \"%s\".\n", src);
 				std::exit(1);
 			}
+			v *= base;
+			v += d - digits;
 		}
 		return v;
 	};
 
 	Port port;
 	check(port.open(next_arg()));
+
+	if (*argv && (*argv)[0] == '-' && (*argv)[1] == 's') {
+		char * a = next_arg() + 2;
+		if (*a == '\0') a = next_arg();
+		int baud = std::strtol(a, &a, 10);
+		Parity parity;
+		if (*a == '\0' || *a == 'N') parity = Parity::none;
+		else if (*a == 'E') parity = Parity::even;
+		else if (*a == 'O') parity = Parity::odd;
+		else {
+			fprintf(stderr, "Expected serial port pairty (N, E or O), but got \"%c\".\n", *a);
+			std::exit(1);
+		}
+		if (*a) ++a;
+		StopBits stop_bits;
+		if (a[0] == '\0' || (a[0] == '1' && a[1] == '\0')) stop_bits = StopBits::one;
+		else if (a[0] == '2' && a[1] == '\0') stop_bits = StopBits::two;
+		else {
+			fprintf(stderr, "Expected serial port stop bits (1 or 2), but got \"%s\".\n", a);
+			std::exit(1);
+		}
+		port.set(baud, parity, stop_bits);
+	}
+
 	ModbusSerialRtu bus(std::move(port));
 
-	uint8_t slave_id = parse_uint16(next_arg());
+	uint8_t slave_id = parse_uint(next_arg());
 
 	char const * cmd = next_arg();
 
 	if (std::strcmp(cmd, "read-coils") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		std::vector<unsigned char> values(parse_uint16(next_arg()));
+		uint16_t address = parse_uint(next_arg());
+		std::vector<unsigned char> values(parse_uint(next_arg()));
 		check(bus.read_coils(slave_id, address, values, 1s));
 		show_bits(address, values);
 
 	} else if (std::strcmp(cmd, "read-inputs") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		std::vector<unsigned char> values(parse_uint16(next_arg()));
+		uint16_t address = parse_uint(next_arg());
+		std::vector<unsigned char> values(parse_uint(next_arg()));
 		check(bus.read_inputs(slave_id, address, values, 1s));
 		show_bits(address, values);
 
 	} else if (std::strcmp(cmd, "read-holding-registers") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		std::vector<uint16_t> values(parse_uint16(next_arg()));
+		uint16_t address = parse_uint(next_arg());
+		std::vector<uint16_t> values(parse_uint(next_arg()));
 		check(bus.read_holding_registers(slave_id, address, values, 1s));
 		show_regs(address, values);
 
 	} else if (std::strcmp(cmd, "read-input-registers") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		std::vector<uint16_t> values(parse_uint16(next_arg()));
+		uint16_t address = parse_uint(next_arg());
+		std::vector<uint16_t> values(parse_uint(next_arg()));
 		check(bus.read_input_registers(slave_id, address, values, 1s));
 		show_regs(address, values);
 
 	} else if (std::strcmp(cmd, "write-single-coil") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		uint16_t value = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
+		uint16_t value = parse_uint(next_arg());
 		check(bus.write_single_coil(slave_id, address, value, 1s));
 
 	} else if (std::strcmp(cmd, "write-single-register") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		uint16_t value = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
+		uint16_t value = parse_uint(next_arg());
 		check(bus.write_single_register(slave_id, address, value, 1s));
 
 	} else if (std::strcmp(cmd, "write-multiple-coils") == 0) {
-		uint16_t address = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
 		std::vector<unsigned char> values;
-		while (char * a = *argv++) values.push_back(bool(parse_uint16(a)));
+		while (char * a = *argv++) values.push_back(bool(parse_uint(a)));
 		check(bus.write_multiple_coils(slave_id, address, values, 1s));
 
 	} else if (std::strcmp(cmd, "write-multiple-registers") == 0) {
-		uint16_t address = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
 		std::vector<uint16_t> values;
-		while (char * a = *argv++) values.push_back(parse_uint16(a));
+		while (char * a = *argv++) values.push_back(parse_uint(a));
 		check(bus.write_multiple_registers(slave_id, address, values, 1s));
 
 	} else if (std::strcmp(cmd, "write-coils") == 0) {
-		uint16_t address = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
 		std::vector<unsigned char> values;
-		while (char * a = *argv++) values.push_back(bool(parse_uint16(a)));
+		while (char * a = *argv++) values.push_back(bool(parse_uint(a)));
 		check(bus.write_coils(slave_id, address, values, 1s));
 
 	} else if (std::strcmp(cmd, "write-registers") == 0) {
-		uint16_t address = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
 		std::vector<uint16_t> values;
-		while (char * a = *argv++) values.push_back(parse_uint16(a));
+		while (char * a = *argv++) values.push_back(parse_uint(a));
 		check(bus.write_registers(slave_id, address, values, 1s));
 
 	} else if (std::strcmp(cmd, "read-file-record") == 0) {
@@ -163,9 +185,9 @@ int main(int argc, char * * argv) {
 		std::vector<std::vector<uint16_t>> data;
 		while (*argv) {
 			groups.emplace_back();
-			groups.back().file_number = parse_uint16(next_arg());
-			groups.back().address = parse_uint16(next_arg());
-			data.emplace_back(parse_uint16(next_arg()));
+			groups.back().file_number = parse_uint(next_arg());
+			groups.back().address = parse_uint(next_arg());
+			data.emplace_back(parse_uint(next_arg()));
 			groups.back().data = data.back();
 		}
 		check(bus.read_file_record(slave_id, groups, 1s));
@@ -179,30 +201,30 @@ int main(int argc, char * * argv) {
 		std::vector<std::vector<uint16_t>> data;
 		while (*argv) {
 			groups.emplace_back();
-			groups.back().file_number = parse_uint16(next_arg());
-			groups.back().address = parse_uint16(next_arg());
+			groups.back().file_number = parse_uint(next_arg());
+			groups.back().address = parse_uint(next_arg());
 			data.emplace_back();
 			while (*argv) {
 				char const * a = next_arg();
 				if (std::strcmp(a, ";") == 0) break;
-				data.back().push_back(parse_uint16(a));
+				data.back().push_back(parse_uint(a));
 			}
 			groups.back().data = data.back();
 		}
 		check(bus.write_file_record(slave_id, groups, 1s));
 
 	} else if (std::strcmp(cmd, "mask-write-register") == 0) {
-		uint16_t address = parse_uint16(next_arg());
-		uint16_t and_mask = parse_uint16(next_arg());
-		uint16_t or_mask = parse_uint16(next_arg());
+		uint16_t address = parse_uint(next_arg());
+		uint16_t and_mask = parse_uint(next_arg());
+		uint16_t or_mask = parse_uint(next_arg());
 		check(bus.mask_write_register(slave_id, address, and_mask, or_mask, 1s));
 
 	} else if (std::strcmp(cmd, "read-write-registers") == 0) {
-		uint16_t read_address = parse_uint16(next_arg());
-		std::vector<uint16_t> read_values(parse_uint16(next_arg()));
-		uint16_t write_address = parse_uint16(next_arg());
+		uint16_t read_address = parse_uint(next_arg());
+		std::vector<uint16_t> read_values(parse_uint(next_arg()));
+		uint16_t write_address = parse_uint(next_arg());
 		std::vector<uint16_t> write_values;
-		while (char * a = *argv++) write_values.push_back(parse_uint16(a));
+		while (char * a = *argv++) write_values.push_back(parse_uint(a));
 		check(bus.read_write_registers(slave_id, write_address, write_values, read_address, read_values, 1s));
 		show_regs(read_address, read_values);
 
