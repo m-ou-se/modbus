@@ -50,6 +50,16 @@ void check(mstd::error_or<void> const & e) {
 	}
 }
 
+unsigned int parse_uint(char const * src) {
+	char * s;
+	unsigned int v = std::strtol(src, &s, 0);
+	if (s == src || *s != '\0') {
+		fprintf(stderr, "Expected integer, but got \"%s\".\n", src);
+		std::exit(1);
+	}
+	return v;
+}
+
 int main(int argc, char * * argv) {
 	char const * argv0 = argv[0];
 	++argv;
@@ -67,27 +77,6 @@ int main(int argc, char * * argv) {
 			std::exit(1);
 		}
 		return arg;
-	};
-
-	auto parse_uint = [&] (char const * src) -> unsigned int {
-		char const * s = src;
-		unsigned int v = 0;
-		int base = 10;
-		if (s[0] == '0' && s[1] == 'x') {
-			base = 16;
-			s += 2;
-		}
-		char const * digits = "0123456789ABCDEF";
-		while (char c = *s++) {
-			char const * d = std::strchr(digits, std::toupper(c));
-			if (d == nullptr) {
-				fprintf(stderr, "Expected integer, but got \"%s\".\n", src);
-				std::exit(1);
-			}
-			v *= base;
-			v += d - digits;
-		}
-		return v;
 	};
 
 	Port port;
