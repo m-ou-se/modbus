@@ -18,9 +18,9 @@ enum class Error : int {
 	gateway_no_response      = 0x0B,
 	timeout                  = 0x100,
 	request_too_large        = 0x200,
-	invalid_response_crc     = 0x301,
-	invalid_response         = 0x302,
-	response_too_large       = 0x303,
+	bad_frame                = 0x301, // ADU too short or too long.
+	bad_crc                  = 0x302,
+	invalid_response         = 0x303, // CRC was ok.
 };
 
 class ErrorCategory : public std::error_category {
@@ -40,9 +40,9 @@ public:
 			case Error::gateway_no_response:      return "gateway no response";
 			case Error::timeout:                  return "timeout";
 			case Error::request_too_large:        return "request too large";
-			case Error::invalid_response_crc:     return "invalid response crc";
+			case Error::bad_frame:                return "bad frame";
+			case Error::bad_crc:                  return "bad crc";
 			case Error::invalid_response:         return "invalid response";
-			case Error::response_too_large:       return "response too large";
 		}
 		return "unknown error " + std::to_string(condition);
 	}
