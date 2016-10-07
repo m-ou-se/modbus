@@ -161,9 +161,9 @@ int main(int argc, char * * argv) {
 	} else if (std::strcmp(cmd, "read-file-record") == 0) {
 		std::vector<::Modbus::Modbus::read_file_group> groups;
 		std::vector<std::vector<uint16_t>> data;
-		while (char * a = *argv++) {
+		while (*argv) {
 			groups.emplace_back();
-			groups.back().file_number = parse_uint16(a);
+			groups.back().file_number = parse_uint16(next_arg());
 			groups.back().address = parse_uint16(next_arg());
 			data.emplace_back(parse_uint16(next_arg()));
 			groups.back().data = data.back();
@@ -177,14 +177,15 @@ int main(int argc, char * * argv) {
 	} else if (std::strcmp(cmd, "write-file-record") == 0) {
 		std::vector<::Modbus::Modbus::write_file_group> groups;
 		std::vector<std::vector<uint16_t>> data;
-		while (char * a = *argv++) {
+		while (*argv) {
 			groups.emplace_back();
-			groups.back().file_number = parse_uint16(a);
+			groups.back().file_number = parse_uint16(next_arg());
 			groups.back().address = parse_uint16(next_arg());
 			data.emplace_back();
-			while (char * v = *argv++) {
-				if (std::strcmp(v, ";") == 0) break;
-				data.back().push_back(parse_uint16(v));
+			while (*argv) {
+				char const * a = next_arg();
+				if (std::strcmp(a, ";") == 0) break;
+				data.back().push_back(parse_uint16(a));
 			}
 			groups.back().data = data.back();
 		}
