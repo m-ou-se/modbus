@@ -1,6 +1,6 @@
 project(modbus)
 cmake_minimum_required(VERSION 3.1)
-add_library(modbus src/modbus.cpp)
+add_library(modbus src/error.cpp src/modbus.cpp)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mstd/CMakeLists.txt)
 	add_subdirectory(mstd)
 endif()
