@@ -64,7 +64,7 @@ error_or<range<byte_t>> ModbusSerialRtu::raw_command(
 			// Modbus serial RTU frames may be no longer than 256 bytes.
 			// (1 byte slave id, 2 bytes crc, and 253 PDU.)
 			return std::error_code(Error::bad_frame);
-		} else {
+		} else if (read_i >= 4 + response_buffer.size()) {
 			// Response larger than what fits in response_buffer.
 			is_invalid_response = true;
 		}
