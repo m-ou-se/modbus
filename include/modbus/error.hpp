@@ -50,8 +50,8 @@ public:
 
 extern ErrorCategory error_category;
 
-std::error_code      make_error_code     (Error e) { return {int(e), error_category}; }
-std::error_condition make_error_condition(Error e) { return {int(e), error_category}; }
+inline std::error_code      make_error_code     (Error e) { return {int(e), error_category}; }
+inline std::error_condition make_error_condition(Error e) { return {int(e), error_category}; }
 
 }
 
