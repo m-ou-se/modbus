@@ -1,8 +1,6 @@
 # modbus
 Cross-platform C++14 modbus library.
 
-Not yet ready to be used.
-
 # Example
 
 ```C++
