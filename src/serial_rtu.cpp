@@ -47,7 +47,7 @@ error_or<range<byte_t>> ModbusSerialRtu::raw_command(
 	auto read = port_.read(timeout);
 	size_t read_i = 0;
 
-	for (; read.ok() && read.value(); read = port_.read(2ms), ++read_i) {
+	for (; read.ok() && read.value(); read = port_.read(read_i == response_buffer.size() + 4 ? 2ms : 20ms), ++read_i) {
 		crc.add(*read.value());
 		if (read_i == 0) {
 			if (read.value() != slave_id) is_invalid_response = true;
