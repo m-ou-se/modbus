@@ -20,6 +20,9 @@ class Modbus {
 
 public:
 
+	// The timeout is the time to wait for the first byte, the full response
+	// may take longer. With timeout == 0, the functions immediately return
+	// Error::timeout, without waiting for any response.
 	using timeout_t = std::chrono::milliseconds;
 
 	// Function code 0x01.
@@ -184,12 +187,11 @@ public:
 	);
 
 	// Send a raw command.
-	// If the result does not fit into response_buffer, response_too_large is returned.
-	// On success, the subrange (starting at the first byte) of response_buffer that contains the response is returned.
-	// parameters and response_buffer may overlap.
-	// The response does not include the function code.
-	// The timeout is the time to wait for the first byte. The full response may take slightly longer.
-	// With timeout == 0, immediately returns Error::timeout. (Useful for broadcasts.)
+	// If the result does not fit into response_buffer, Error::invalid_response
+	// is returned. On success, the subrange (starting at the first byte) of
+	// response_buffer that contains the response is returned. parameters and
+	// response_buffer may overlap. The response does not include the function
+	// code. Exception responses are returned as the corresponding Error.
 	virtual error_or<range<byte_t>> raw_command(
 		byte_t slave_id,
 		byte_t function_code,
